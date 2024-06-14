@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if ! which clang-format >/dev/null 2>&1; then
+	echo >&2 -e "\033[31m[ERROR] clang-format is required when committing for checking the coding style of files\033[0m"
+	echo >&2 -e "\033[31m[ERROR] clang-format is not in the PATH\033[0m"
+	echo >&2
+	echo >&2 -e '\033[33m[WARNING] Use git commit --no-verify option to bypass this check\033[0m'
+	exit 1
+fi
+
+once=true
+for f in $(git diff --name-only --staged --diff-filter=ACMR -- '*.[ch]'); do
+	if ! clang-format --dry-run --Werror "$f" >/dev/null 2>&1; then
+		if $once; then
+			echo >&2 -e "\033[31m[ERROR] The following files are not well formatted:\033[0m"
+			once=false
+		fi
+
+		echo >&2 -e "\033[31m[ERROR] $f\033[0m"
+	fi
+done
+
+if ! $once; then
+	echo >&2
+	echo >&2 -e "\033[31m[ERROR] Use the following command to reformat a file:\033[0m"
+	echo >&2 -e "\033[31m[ERROR] clang-format -i FILE\033[0m"
+	echo >&2
+	echo >&2 -e '\033[33m[WARNING] Use git commit --no-verify option to bypass this check\033[0m'
+	exit 1
+fi

@@ -1,0 +1,9 @@
+.cproject
+.project
+.settings/
+Debug/
+Release/
+*.launch
+.vscode/
+.mxproject
+.editorconfig

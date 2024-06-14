@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cli.h"
+#include "max31865.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -92,6 +93,61 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     cli_flag = 1;
 }
 
+/**
+ * @brief      Callback for chipselect pin state handle
+ * @param[in]  enable : expected slave state
+ * @return     None
+ */
+void chipselect_cb(bool enable)
+{
+    if (enable)
+    { // device selected
+        // pull chip select pin low
+        GPIOB->BSRR = GPIO_PIN_12 << 16;
+    }
+    else
+    { // device not selected
+        // pull chip select pin high
+        GPIOB->BSRR = GPIO_PIN_12;
+    }
+}
+
+/**
+ * @brief      Callback for transcieving SPI data on full duplex
+ * @param[in]  data : the data to be send via SPI
+ * @return     uint8_t : the returned response to the sent data
+ */
+uint8_t spi_trx_cb(uint8_t data)
+{
+    uint8_t RX_data = 0x0;
+    // TODO SPI manipulations
+    return RX_data;
+}
+
+/**
+ * @brief      Delay callback for charge time
+ */
+void charge_time_delay_cb(void)
+{
+    // TODO 10 ms delay (use HAL_Delay)
+}
+
+/**
+ * @brief      Delay callback for conversion time
+ */
+void conversion_time_delay_cb(void)
+{
+    // TODO 65 ms delay (use HAL_Delay)
+}
+
+/**
+ * @brief      Callback for threshold fault handling
+ */
+void threshold_fault(void)
+{
+    // TODO handle threshold fault
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -101,6 +157,22 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    float ext_temp = 0.0;
+    max31865_t pt100_TempSensor;
+    max31865_init(&pt100_TempSensor,
+                  chipselect_cb,
+                  spi_trx_cb,
+                  charge_time_delay_cb,
+                  conversion_time_delay_cb,
+                  threshold_fault,
+                  threshold_fault,
+                  100,    // RTD resistance
+                  432,    // Rref resistance
+                  0,      // lower fault threshold
+                  0x7fff, // higher fault threshold
+                  false,  // 2 wire
+                  false); // 50Hz filter
+
     /* USER CODE END 1 */
 
     /* MCU Configuration--------------------------------------------------------*/
@@ -129,7 +201,10 @@ int main(void)
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx_buffer, INPUT_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
-    printf("Coucou Hibou\n");
+    ext_temp = max31865_readCelsius(&pt100_TempSensor);
+
+    printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
+    printf("Temperatuere exterieure est de :%f deg Celsius\n", ext_temp);
     print_cli_menu();
     /* USER CODE END 2 */
 

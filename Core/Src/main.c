@@ -35,7 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CHARGE_TIME_DELAY_MS     (10u)
+#define CONVERSION_TIME_DELAY_MS (65u)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -129,7 +130,7 @@ uint8_t spi_trx_cb(uint8_t data)
  */
 void charge_time_delay_cb(void)
 {
-    // TODO 10 ms delay (use HAL_Delay)
+    HAL_Delay(CHARGE_TIME_DELAY_MS);
 }
 
 /**
@@ -137,7 +138,7 @@ void charge_time_delay_cb(void)
  */
 void conversion_time_delay_cb(void)
 {
-    // TODO 65 ms delay (use HAL_Delay)
+    HAL_Delay(CONVERSION_TIME_DELAY_MS);
 }
 
 /**

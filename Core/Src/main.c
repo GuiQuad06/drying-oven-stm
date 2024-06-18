@@ -120,9 +120,15 @@ void chipselect_cb(bool enable)
  */
 uint8_t spi_trx_cb(uint8_t data)
 {
-    uint8_t RX_data = 0x0;
-    // TODO SPI manipulations
-    return RX_data;
+    uint8_t rx_data[1];
+
+    if (HAL_SPI_TransmitReceive(&hspi2, &data, &rx_data[0], 1, 10) != HAL_OK)
+    {
+        printf("HAL Busy\n");
+        return 0;
+    }
+    printf("HAL OK\n");
+    return *rx_data;
 }
 
 /**
@@ -205,7 +211,7 @@ int main(void)
     ext_temp = max31865_readCelsius(&pt100_TempSensor);
 
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
-    printf("Temperatuere exterieure est de :%f deg Celsius\n", ext_temp);
+    printf("Temperature exterieure est de :%u deg Celsius\n", (uint16_t) ext_temp);
     print_cli_menu();
     /* USER CODE END 2 */
 

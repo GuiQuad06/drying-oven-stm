@@ -22,7 +22,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cli.h"
-#include "max31865.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -52,6 +51,7 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
+max31865_t pt100_TempSensor;
 static const char fw_version[] = "0.0.1";
 
 static uint8_t rx_buffer[INPUT_BUF_SIZE];
@@ -127,7 +127,6 @@ uint8_t spi_trx_cb(uint8_t data)
         printf("HAL Busy\n");
         return 0;
     }
-    printf("HAL OK\n");
     return *rx_data;
 }
 
@@ -164,8 +163,6 @@ void threshold_fault(void)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
-    float ext_temp = 0.0;
-    max31865_t pt100_TempSensor;
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,
                   spi_trx_cb,
@@ -208,10 +205,7 @@ int main(void)
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx_buffer, INPUT_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
-    ext_temp = max31865_readCelsius(&pt100_TempSensor);
-
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
-    printf("Temperature exterieure est de :%u deg Celsius\n", (uint16_t) ext_temp);
     print_cli_menu();
     /* USER CODE END 2 */
 

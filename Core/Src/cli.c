@@ -107,8 +107,7 @@ cli_status_t cmd_read_pt100(int argc, char **argv)
 {
     cli_status_t status = STATUS_OK;
 
-    // TODO
-    printf("read pt100\n");
+    printf("PT100 temperature is:%u\n", (uint16_t) max31865_readCelsius(&pt100_TempSensor));
 
     return status;
 }
@@ -125,14 +124,11 @@ cli_status_t cmd_led(int argc, char **argv)
         {
             return STATUS_PARAMETER_UNKNOWN;
         }
-
-        // TODO
         else if (!strcmp(argv[1], "off"))
         {
             // Light off
             GPIOA->BSRR = GPIO_PIN_5 << 16;
         }
-
         else if (!strcmp(argv[1], "on"))
         {
             // Light on

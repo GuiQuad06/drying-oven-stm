@@ -32,11 +32,13 @@ extern "C"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "dht22.h"
 #include "max31865.h"
     /* USER CODE END Includes */
 
     /* Exported types ------------------------------------------------------------*/
     /* USER CODE BEGIN ET */
+    extern dht22_t dht22;
     extern max31865_t pt100_TempSensor;
     /* USER CODE END ET */
 

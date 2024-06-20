@@ -22,6 +22,7 @@ typedef struct
 
 cli_menu_t cli_menu[] = {{"pt100", cmd_read_pt100, "Read the PT100 temperature"},
                          {"led", cmd_led, "Set or reset the LED (on/off)"},
+                         {"dht22", cmd_dht22, "Read the DHT22 temperature and humidity"},
                          {0, 0, 0}};
 
 str_status_t str_status[] = {{STATUS_OK, "Tout va bien"},
@@ -137,6 +138,36 @@ cli_status_t cmd_led(int argc, char **argv)
     }
 
     return STATUS_OK;
+}
+
+cli_status_t cmd_dht22(int argc, char **argv)
+{
+    cli_status_t status        = STATUS_OK;
+    uint16_t data[DHT22_FRAME] = {0};
+    uint8_t cs                 = 0;
+    dht22_status_t sts         = DHT22_OK;
+
+    sts = dht22_start(&dht22);
+    if (DHT22_ERROR == sts)
+    {
+        return STATUS_KO;
+    }
+    else
+    {
+        cs = dht22_read_data(&dht22, data, DHT22_FRAME);
+
+        if (0x00 == cs)
+        {
+            return STATUS_WRONG_CHECKSUM;
+        }
+        else
+        {
+            printf("Temperature: %u\n", (uint16_t) (data[1] / 10.0));
+            printf("Humidity: %u\n", (uint16_t) (data[0] / 10.0));
+        }
+    }
+
+    return status;
 }
 
 /**

@@ -209,8 +209,6 @@ uint8_t gpio_read(void)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
-    dht22_status_t sts = DHT22_OK;
-
     dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read);
 
     max31865_init(&pt100_TempSensor,
@@ -257,9 +255,6 @@ int main(void)
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
-
-    sts = dht22_start(&dht22);
-    printf("DHT22 status: %s\n", sts == DHT22_OK ? "OK" : "ERROR");
 
     print_cli_menu();
     /* USER CODE END 2 */

@@ -20,7 +20,7 @@ typedef enum
     STATUS_TOO_MANY_ARGS,
     STATUS_PARAMETER_MISSING,
     STATUS_PARAMETER_UNKNOWN,
-    STATUS_SERVO_NOK
+    STATUS_WRONG_CHECKSUM
 } cli_status_t;
 
 typedef struct
@@ -36,6 +36,7 @@ cli_status_t cli_input(char *cli);
 void print_feedback(cli_status_t sts);
 cli_status_t cmd_read_pt100(int argc, char **argv);
 cli_status_t cmd_led(int argc, char **argv);
+cli_status_t cmd_dht22(int argc, char **argv);
 
 int atoi(char *str);
 

@@ -34,8 +34,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CHARGE_TIME_DELAY_MS     (10u)
-#define CONVERSION_TIME_DELAY_MS (65u)
+#define CHARGE_TIME_DELAY_US     (10000u)
+#define CONVERSION_TIME_DELAY_US (65200u)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -45,6 +45,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi2;
+
+TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
@@ -68,6 +70,7 @@ static void MX_DMA_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM4_Init(void);
 
 /* USER CODE BEGIN PFP */
 
@@ -75,6 +78,17 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+ * @brief      Delay function in us
+ * @param[in]  time : time in us
+ */
+void delay(uint16_t time)
+{
+    __HAL_TIM_SET_COUNTER(&htim4, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim4) < time)
+        ;
+}
+
 /**
  * @brief      UART Rx callback function
  * @param[in]  huart UART handle
@@ -135,7 +149,7 @@ uint8_t spi_trx_cb(uint8_t data)
  */
 void charge_time_delay_cb(void)
 {
-    HAL_Delay(CHARGE_TIME_DELAY_MS);
+    delay(CHARGE_TIME_DELAY_US);
 }
 
 /**
@@ -143,7 +157,7 @@ void charge_time_delay_cb(void)
  */
 void conversion_time_delay_cb(void)
 {
-    HAL_Delay(CONVERSION_TIME_DELAY_MS);
+    delay(CONVERSION_TIME_DELAY_US);
 }
 
 /**
@@ -201,6 +215,7 @@ int main(void)
     MX_SPI2_Init();
     MX_USART1_UART_Init();
     MX_USART2_UART_Init();
+    MX_TIM4_Init();
     /* USER CODE BEGIN 2 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx_buffer, INPUT_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
@@ -303,6 +318,49 @@ static void MX_SPI2_Init(void)
     /* USER CODE BEGIN SPI2_Init 2 */
 
     /* USER CODE END SPI2_Init 2 */
+}
+
+/**
+ * @brief TIM4 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM4_Init(void)
+{
+    /* USER CODE BEGIN TIM4_Init 0 */
+
+    /* USER CODE END TIM4_Init 0 */
+
+    TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+    TIM_MasterConfigTypeDef sMasterConfig     = {0};
+
+    /* USER CODE BEGIN TIM4_Init 1 */
+
+    /* USER CODE END TIM4_Init 1 */
+    htim4.Instance               = TIM4;
+    htim4.Init.Prescaler         = 64 - 1;
+    htim4.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim4.Init.Period            = 65535;
+    htim4.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM4_Init 2 */
+    __HAL_TIM_ENABLE(&htim4);
+    /* USER CODE END TIM4_Init 2 */
 }
 
 /**

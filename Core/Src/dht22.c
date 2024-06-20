@@ -56,9 +56,9 @@ dht22_status_t dht22_start(dht22_t *device)
 
 uint8_t dht22_read_byte(dht22_t *device)
 {
-    uint8_t res = 0x00;
+    uint8_t res;
 
-    for (int i = 0; i < BYTE_LEN; i++)
+    for (uint8_t i = 0; i < BYTE_LEN; i++)
     {
         // Wait until the pin goes high
         while (!device->input_state())
@@ -66,13 +66,13 @@ uint8_t dht22_read_byte(dht22_t *device)
 
         device->delay_sensor(40);
 
-        if (device->input_state())
+        if (!device->input_state())
         {
-            res |= (1 << (BYTE_LEN - 1 - i));
+            res &= ~(1 << (BYTE_LEN - 1 - i));
         }
         else
         {
-            res &= ~(1 << (BYTE_LEN - 1 - i));
+            res |= (1 << (BYTE_LEN - 1 - i));
         }
         // Wait until the pin goes low
         while (device->input_state())

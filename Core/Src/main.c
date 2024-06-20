@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cli.h"
+#include "dht22.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -53,6 +54,7 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
+dht22_t dht22;
 max31865_t pt100_TempSensor;
 static const char fw_version[] = "0.0.1";
 
@@ -168,6 +170,36 @@ void threshold_fault(void)
     // TODO handle threshold fault
 }
 
+/**
+ * @brief      Set GPIO pin to input mode for DHT22
+ */
+void gpio_input_dir(void)
+{
+    // MODE: 00 (input)
+    GPIOA->CRL &= ~(GPIO_CRL_MODE6);
+
+    // CFG: 01 (floating)
+    GPIOA->CRL |= GPIO_CRL_CNF6_0;
+}
+
+/**
+ * @brief      Write (set or reset) GPIO pin
+ * @param[in]  state : the state to be set
+ */
+void gpio_write(bool state)
+{
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, state ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/**
+ * @brief      Read GPIO pin
+ * @return     uint8_t : the state of the pin
+ */
+uint8_t gpio_read(void)
+{
+    return HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -177,6 +209,10 @@ void threshold_fault(void)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    dht22_status_t sts = DHT22_OK;
+
+    dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read);
+
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,
                   spi_trx_cb,
@@ -221,6 +257,10 @@ int main(void)
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
+
+    sts = dht22_start(&dht22);
+    printf("DHT22 status: %s\n", sts == DHT22_OK ? "OK" : "ERROR");
+
     print_cli_menu();
     /* USER CODE END 2 */
 
@@ -489,6 +529,8 @@ static void MX_GPIO_Init(void)
     /* USER CODE BEGIN MX_GPIO_Init_2 */
     // Set chip select to high level
     GPIOB->BSRR = GPIO_PIN_12;
+    // Set DHT22 pin to high level
+    GPIOA->BSRR = GPIO_PIN_6;
     /* USER CODE END MX_GPIO_Init_2 */
 }
 

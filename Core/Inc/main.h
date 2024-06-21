@@ -40,6 +40,8 @@ extern "C"
     /* USER CODE BEGIN ET */
     extern dht22_t dht22;
     extern max31865_t pt100_TempSensor;
+    extern SPI_HandleTypeDef hspi2;
+    extern TIM_HandleTypeDef htim4;
     /* USER CODE END ET */
 
     /* Exported constants --------------------------------------------------------*/

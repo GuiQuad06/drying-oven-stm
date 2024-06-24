@@ -108,7 +108,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
-    dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read);
+    dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read, gpio_output_dir);
 
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,

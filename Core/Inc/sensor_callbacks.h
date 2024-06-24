@@ -18,6 +18,7 @@ void charge_time_delay_cb(void);
 void conversion_time_delay_cb(void);
 void threshold_fault(void);
 void gpio_input_dir(void);
+void gpio_output_dir(void);
 void gpio_write(bool state);
 uint8_t gpio_read(void);
 

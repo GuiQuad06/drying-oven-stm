@@ -94,6 +94,18 @@ void gpio_input_dir(void)
 }
 
 /**
+ * @brief      Set GPIO pin to output mode for DHT22
+ */
+void gpio_output_dir(void)
+{
+    // MODE: 01 (output)
+    GPIOA->CRL |= GPIO_CRL_MODE6_0;
+
+    // CFG: 00 (push-pull)
+    GPIOA->CRL &= ~(GPIO_CRL_CNF6);
+}
+
+/**
  * @brief      Write (set or reset) GPIO pin
  * @param[in]  state : the state to be set
  */

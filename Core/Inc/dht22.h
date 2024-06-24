@@ -30,6 +30,7 @@ typedef struct
     fptr_b_t output_state;
     fptr_u16_t delay_sensor;
     u8_fptr_t input_state;
+    fptr_t output_cfg;
 
 } dht22_t;
 
@@ -37,7 +38,8 @@ void dht22_init(dht22_t *device,
                 fptr_t input_cfg_cb,
                 fptr_b_t output_state_cb,
                 fptr_u16_t delay_cb,
-                u8_fptr_t input_state_cb);
+                u8_fptr_t input_state_cb,
+                fptr_t output_cfg_cb);
 dht22_status_t dht22_start(dht22_t *device);
 uint8_t dht22_read_data(dht22_t *device, uint16_t *data, uint16_t size);
 

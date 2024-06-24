@@ -16,13 +16,15 @@ void dht22_init(dht22_t *device,
                 fptr_t input_cfg_cb,
                 fptr_b_t output_state_cb,
                 fptr_u16_t delay_cb,
-                u8_fptr_t input_state_cb)
+                u8_fptr_t input_state_cb,
+                fptr_t output_cfg_cb)
 {
     // Object config
     device->input_cfg    = input_cfg_cb;
     device->output_state = output_state_cb;
     device->delay_sensor = delay_cb;
     device->input_state  = input_state_cb;
+    device->output_cfg   = output_cfg_cb;
 }
 
 dht22_status_t dht22_start(dht22_t *device)
@@ -76,6 +78,9 @@ uint8_t dht22_read_data(dht22_t *device, uint16_t *data, uint16_t size)
     {
         checksum = 0x00;
     }
+
+    // Reset the pin as output for the next MCU request
+    device->output_cfg();
 
     return checksum;
 }

@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "cli.h"
 #include "dht22.h"
+#include "esp8266.h"
 #include "sensor_callbacks.h"
 
 #include <stdio.h>
@@ -55,6 +56,7 @@ DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
 dht22_t dht22;
+esp8266_t esp8266;
 max31865_t pt100_TempSensor;
 static const char fw_version[] = "0.0.1";
 
@@ -75,6 +77,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_TIM4_Init(void);
 
 /* USER CODE BEGIN PFP */
+static void ask_user_credentials(esp8266_t *esp8266);
 
 /* USER CODE END PFP */
 
@@ -99,6 +102,30 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     cli_flag = 1;
 }
 
+static void ask_user_credentials(esp8266_t *esp8266)
+{
+    char ssid[50];
+    char password[50];
+
+    printf("Enter SSID for wifi connection:\n");
+
+    while (!cli_flag)
+    {
+    }
+    memcpy(ssid, cli_buffer, strlen(cli_buffer) + 1);
+    cli_flag = 0;
+
+    printf("Enter password for wifi connection:\n");
+
+    while (!cli_flag)
+    {
+    }
+    memcpy(password, cli_buffer, strlen(cli_buffer) + 1);
+    cli_flag = 0;
+
+    esp_8266_set_credentials(esp8266, ssid, password);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -109,6 +136,8 @@ int main(void)
 {
     /* USER CODE BEGIN 1 */
     dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read, gpio_output_dir);
+
+    esp8266_init(&esp8266, delay, NULL);
 
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,
@@ -154,6 +183,8 @@ int main(void)
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
+
+    ask_user_credentials(&esp8266);
 
     print_cli_menu();
     /* USER CODE END 2 */

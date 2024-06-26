@@ -11,7 +11,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-void delay(uint16_t time);
+void delay_ms(uint16_t time);
+void delay_us(uint16_t time);
 void chipselect_cb(bool enable);
 uint8_t spi_trx_cb(uint8_t data);
 void charge_time_delay_cb(void);

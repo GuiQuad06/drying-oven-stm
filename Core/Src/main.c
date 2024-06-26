@@ -135,9 +135,9 @@ static void ask_user_credentials(esp8266_t *esp8266)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
-    dht22_init(&dht22, gpio_input_dir, gpio_write, delay, gpio_read, gpio_output_dir);
+    dht22_init(&dht22, gpio_input_dir, gpio_write, delay_us, gpio_read, gpio_output_dir);
 
-    esp8266_init(&esp8266, delay, NULL);
+    esp8266_init(&esp8266, delay_ms, NULL);
 
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,

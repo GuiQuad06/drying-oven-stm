@@ -12,10 +12,19 @@
 #define CONVERSION_TIME_DELAY_US (65200u)
 
 /**
+ * @brief      Delay function in ms
+ * @param[in]  time : time in ms
+ */
+void delay_ms(uint16_t time)
+{
+    HAL_Delay(time);
+}
+
+/**
  * @brief      Delay function in us
  * @param[in]  time : time in us
  */
-void delay(uint16_t time)
+void delay_us(uint16_t time)
 {
     __HAL_TIM_SET_COUNTER(&htim4, 0);
     while (__HAL_TIM_GET_COUNTER(&htim4) < time)
@@ -62,7 +71,7 @@ uint8_t spi_trx_cb(uint8_t data)
  */
 void charge_time_delay_cb(void)
 {
-    delay(CHARGE_TIME_DELAY_US);
+    delay_us(CHARGE_TIME_DELAY_US);
 }
 
 /**
@@ -70,7 +79,7 @@ void charge_time_delay_cb(void)
  */
 void conversion_time_delay_cb(void)
 {
-    delay(CONVERSION_TIME_DELAY_US);
+    delay_us(CONVERSION_TIME_DELAY_US);
 }
 
 /**

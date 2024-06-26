@@ -52,6 +52,7 @@ TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
@@ -75,7 +76,6 @@ static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM4_Init(void);
-
 /* USER CODE BEGIN PFP */
 static void ask_user_credentials(esp8266_t *esp8266);
 
@@ -399,6 +399,9 @@ static void MX_DMA_Init(void)
     __HAL_RCC_DMA1_CLK_ENABLE();
 
     /* DMA interrupt init */
+    /* DMA1_Channel5_IRQn interrupt configuration */
+    HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
     /* DMA1_Channel6_IRQn interrupt configuration */
     HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);

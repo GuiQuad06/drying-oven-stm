@@ -63,8 +63,8 @@ static const char fw_version[] = "0.0.1";
 
 static uint8_t rx_buffer[INPUT_BUF_SIZE];
 static char cli_buffer[INPUT_BUF_SIZE]; /** Input buffer for the command line interpreter. */
-static uint8_t esp_buffer[INPUT_BUF_SIZE];
-char esp_freeze_buffer[INPUT_BUF_SIZE];
+static uint8_t esp_buffer[MAX_BUFFER_LEN];
+static char esp_freeze_buffer[MAX_BUFFER_LEN];
 
 volatile uint8_t cli_flag = 0;
 volatile uint8_t esp_flag = 0;
@@ -112,7 +112,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         memcpy(esp_freeze_buffer, esp_buffer, Size);
 
         /* start the DMA again */
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, INPUT_BUF_SIZE);
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
         __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
 
         /** Set New message available for processing */
@@ -126,8 +126,8 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 
 static void ask_user_credentials(esp8266_t *esp8266)
 {
-    char ssid[50];
-    char password[50];
+    char ssid[MAX_CHAR_SSID];
+    char password[MAX_CHAR_PWD];
 
     printf("Enter SSID for wifi connection:\n");
 
@@ -209,10 +209,9 @@ int main(void)
     ask_user_credentials(&esp8266);
     esp8266_connect(&esp8266);
 
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, INPUT_BUF_SIZE);
-    __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
-
     print_cli_menu();
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, MAX_BUFFER_LEN);
+    __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -226,6 +225,9 @@ int main(void)
         {
             esp_flag = 0;
             printf("ESP8266: %s\n", esp_freeze_buffer);
+
+            /** Clear buffer */
+            memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);
         }
 
         /** Check if message is available */

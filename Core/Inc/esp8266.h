@@ -10,13 +10,17 @@
 
 #include <stdint.h>
 
+#define MAX_CHAR_SSID  (50u)
+#define MAX_CHAR_PWD   (50u)
+#define MAX_BUFFER_LEN (32u)
+
 typedef void (*fptr_pc_u16_t)(char *, uint16_t);
 typedef void (*fptr_u16_t)(uint16_t);
 
 typedef struct
 {
-    char *ssid;
-    char *password;
+    char ssid[MAX_CHAR_SSID];
+    char password[MAX_CHAR_PWD];
 } wifi_credentials_t;
 
 typedef struct

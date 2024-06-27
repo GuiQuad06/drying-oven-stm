@@ -142,16 +142,4 @@ uint8_t gpio_read(void)
 void send_message(char *msg, uint16_t timeout)
 {
     HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), timeout);
-    printf("Message sent: %s\n", msg);
-
-    // Wait for the response
-    while (!esp_flag)
-    {
-    }
-    esp_flag = 0;
-
-    printf("Response received: %s\n", esp_freeze_buffer);
-
-    // Clear the buffer
-    memset(esp_freeze_buffer, 0, INPUT_BUF_SIZE);
 }

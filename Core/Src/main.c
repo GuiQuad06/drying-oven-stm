@@ -63,8 +63,11 @@ static const char fw_version[] = "0.0.1";
 
 static uint8_t rx_buffer[INPUT_BUF_SIZE];
 static char cli_buffer[INPUT_BUF_SIZE]; /** Input buffer for the command line interpreter. */
+static uint8_t esp_buffer[INPUT_BUF_SIZE];
+static char esp_freeze_buffer[INPUT_BUF_SIZE];
 
 volatile uint8_t cli_flag = 0;
+volatile uint8_t esp_flag = 0;
 
 /* USER CODE END PV */
 
@@ -91,15 +94,34 @@ static void ask_user_credentials(esp8266_t *esp8266);
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    /** Copy RxBuffer to cli_input buffer for processing*/
-    memcpy(cli_buffer, rx_buffer, Size);
+    if (USART2 == huart->Instance)
+    {
+        /** Copy RxBuffer to cli_input buffer for processing*/
+        memcpy(cli_buffer, rx_buffer, Size);
 
-    /* start the DMA again */
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
-    __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
+        /* start the DMA again */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
+        __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
-    /** Set New message available for processing */
-    cli_flag = 1;
+        /** Set New message available for processing */
+        cli_flag = 1;
+    }
+    else if (USART1 == huart->Instance)
+    {
+        // Do something with the ESP8266 received data
+        memcpy(esp_freeze_buffer, esp_buffer, Size);
+
+        /* start the DMA again */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, INPUT_BUF_SIZE);
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+
+        /** Set New message available for processing */
+        esp_flag = 1;
+    }
+    else
+    {
+        return;
+    }
 }
 
 static void ask_user_credentials(esp8266_t *esp8266)
@@ -185,6 +207,10 @@ int main(void)
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
 
     ask_user_credentials(&esp8266);
+    esp8266_connect(&esp8266);
+
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, INPUT_BUF_SIZE);
+    __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
 
     print_cli_menu();
     /* USER CODE END 2 */
@@ -196,6 +222,12 @@ int main(void)
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
+        if (esp_flag == 1)
+        {
+            esp_flag = 0;
+            printf("ESP8266: %s\n", esp_freeze_buffer);
+        }
+
         /** Check if message is available */
         if (cli_flag == 1)
         {

@@ -8,6 +8,8 @@
 
 #include "main.h"
 
+#include <string.h>
+
 #define CHARGE_TIME_DELAY_US     (10000u)
 #define CONVERSION_TIME_DELAY_US (65200u)
 
@@ -130,4 +132,26 @@ void gpio_write(bool state)
 uint8_t gpio_read(void)
 {
     return HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
+}
+
+/**
+ * @brief      Send a message over UART interface
+ * @param[in]  msg : the message to be sent
+ * @param[in]  timeout : the timeout for the message to be sent
+ */
+void send_message(char *msg, uint16_t timeout)
+{
+    HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), timeout);
+    printf("Message sent: %s\n", msg);
+
+    // Wait for the response
+    while (!esp_flag)
+    {
+    }
+    esp_flag = 0;
+
+    printf("Response received: %s\n", esp_freeze_buffer);
+
+    // Clear the buffer
+    memset(esp_freeze_buffer, 0, INPUT_BUF_SIZE);
 }

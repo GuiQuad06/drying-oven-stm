@@ -64,7 +64,7 @@ static const char fw_version[] = "0.0.1";
 static uint8_t rx_buffer[INPUT_BUF_SIZE];
 static char cli_buffer[INPUT_BUF_SIZE]; /** Input buffer for the command line interpreter. */
 static uint8_t esp_buffer[INPUT_BUF_SIZE];
-static char esp_freeze_buffer[INPUT_BUF_SIZE];
+char esp_freeze_buffer[INPUT_BUF_SIZE];
 
 volatile uint8_t cli_flag = 0;
 volatile uint8_t esp_flag = 0;
@@ -159,7 +159,7 @@ int main(void)
     /* USER CODE BEGIN 1 */
     dht22_init(&dht22, gpio_input_dir, gpio_write, delay_us, gpio_read, gpio_output_dir);
 
-    esp8266_init(&esp8266, delay_ms, NULL);
+    esp8266_init(&esp8266, delay_ms, send_message);
 
     max31865_init(&pt100_TempSensor,
                   chipselect_cb,

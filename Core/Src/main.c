@@ -61,6 +61,10 @@ esp8266_t esp8266;
 max31865_t pt100_TempSensor;
 static const char fw_version[] = "0.0.1";
 
+const char *hello_http      = "<h1>Hello World!</h1>";
+volatile uint8_t cpt_addr   = 0;
+volatile uint16_t prev_size = 0;
+
 static uint8_t rx_buffer[INPUT_BUF_SIZE];
 static char cli_buffer[INPUT_BUF_SIZE]; /** Input buffer for the command line interpreter. */
 static uint8_t esp_buffer[MAX_BUFFER_LEN];
@@ -111,12 +115,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         // Do something with the ESP8266 received data
         memcpy(esp_freeze_buffer, esp_buffer, Size);
 
-        /* start the DMA again */
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
-        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
-
-        /** Set New message available for processing */
-        esp_flag = 1;
+        /** Set New message available for processing*/
+        if (MAX_BUFFER_LEN == Size)
+        {
+            esp_flag = 1;
+        }
+        else
+        {
+            /* start the DMA while entire message has not been received */
+            HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
+            __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+        }
     }
     else
     {
@@ -226,11 +235,15 @@ int main(void)
         /* USER CODE BEGIN 3 */
         if (esp_flag == 1)
         {
+            http_send_data(&esp8266, esp_freeze_buffer, strlen(esp_freeze_buffer), hello_http, strlen(hello_http));
+
             esp_flag = 0;
             printf("ESP8266: %s\n", esp_freeze_buffer);
-
             /** Clear buffer */
             memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);
+            /* start the DMA again */
+            HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
+            __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
         }
 
         /** Check if message is available */

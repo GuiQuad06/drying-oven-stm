@@ -22,6 +22,6 @@ void gpio_input_dir(void);
 void gpio_output_dir(void);
 void gpio_write(bool state);
 uint8_t gpio_read(void);
-uint8_t send_message(char *msg, uint16_t timeout);
+uint8_t send_message(const char *msg, uint16_t timeout);
 
 #endif /* INC_SENSOR_CALLBACKS_H_ */

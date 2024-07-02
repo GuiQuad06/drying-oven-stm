@@ -14,8 +14,15 @@
 #define MAX_CHAR_PWD   (50u)
 #define MAX_BUFFER_LEN (32u)
 
-typedef void (*fptr_pc_u16_t)(char *, uint16_t);
+typedef uint8_t (*fptr_pc_u16_t)(char *, uint16_t);
 typedef void (*fptr_u16_t)(uint16_t);
+
+typedef enum
+{
+    ESP8266_OK        = 0x00,
+    ESP8266_ERROR     = 0x01,
+    ESP8266_HAL_ERROR = 0x02,
+} esp8266_status_t;
 
 typedef struct
 {
@@ -32,6 +39,6 @@ typedef struct
 
 void esp_8266_set_credentials(esp8266_t *esp8266, char *ssid, char *password);
 void esp8266_init(esp8266_t *esp8266, fptr_u16_t delay_ms, fptr_pc_u16_t send);
-void esp8266_connect(esp8266_t *esp8266);
+esp8266_status_t esp8266_connect(esp8266_t *esp8266);
 
 #endif /* INC_ESP8266_H_ */

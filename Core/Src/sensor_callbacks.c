@@ -138,8 +138,9 @@ uint8_t gpio_read(void)
  * @brief      Send a message over UART interface
  * @param[in]  msg : the message to be sent
  * @param[in]  timeout : the timeout for the message to be sent
+ * @return     uint8_t : the status of the message sending
  */
-void send_message(char *msg, uint16_t timeout)
+uint8_t send_message(char *msg, uint16_t timeout)
 {
-    HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), timeout);
+    return HAL_UART_Transmit(&huart1, (uint8_t *) msg, strlen(msg), timeout) == HAL_OK ? 0 : 1;
 }

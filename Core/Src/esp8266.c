@@ -24,9 +24,10 @@ void esp8266_init(esp8266_t *esp8266, fptr_u16_t delay_ms, fptr_pc_u16_t send)
     esp8266->send_cb  = send;
 }
 
-void esp8266_connect(esp8266_t *esp8266)
+esp8266_status_t esp8266_connect(esp8266_t *esp8266)
 {
     char cwjap_cmd[MAX_CHAR_CWJAP];
+    uint8_t uart_sts = 0x00;
 
     memset(cwjap_cmd, 0, MAX_CHAR_CWJAP);
 
@@ -37,24 +38,45 @@ void esp8266_connect(esp8266_t *esp8266)
     strcat(cwjap_cmd, "\"\r\n");
 
     // Init the module
-    esp8266->send_cb("AT\r\n", 2000u);
-    esp8266->send_cb("AT+GMR\r\n", 2000u);
-    esp8266->send_cb("AT+CIPSERVER=0\r\n", 2000u);
-    esp8266->send_cb("AT+RESTORE\r\n", 2000u);
+    uart_sts = esp8266->send_cb("AT\r\n", 2000u);
+    uart_sts |= esp8266->send_cb("AT+GMR\r\n", 2000u);
+    uart_sts |= esp8266->send_cb("AT+CIPSERVER=0\r\n", 2000u);
+    uart_sts |= esp8266->send_cb("AT+RESTORE\r\n", 2000u);
+
+    if (0x00 != uart_sts)
+    {
+        return ESP8266_HAL_ERROR;
+    }
     esp8266->delay_cb(5000u);
 
     // Set mode to station
-    esp8266->send_cb("AT+CWMODE=1\r\n", 1500u);
+    uart_sts = esp8266->send_cb("AT+CWMODE=1\r\n", 1500u);
+    if (0x00 != uart_sts)
+    {
+        return ESP8266_HAL_ERROR;
+    }
     esp8266->delay_cb(1500u);
 
     // Connect to wifi
-    esp8266->send_cb(cwjap_cmd, 2000u);
+    uart_sts = esp8266->send_cb(cwjap_cmd, 2000u);
+    if (0x00 != uart_sts)
+    {
+        return ESP8266_HAL_ERROR;
+    }
     esp8266->delay_cb(5000u);
 
     // Connect to server
-    esp8266->send_cb("AT+CIFSR\r\n", 1500u);
+    uart_sts = esp8266->send_cb("AT+CIFSR\r\n", 1500u);
     esp8266->delay_cb(1500u);
-    esp8266->send_cb("AT+CIPMUX=1\r\n", 1500u);
+    uart_sts |= esp8266->send_cb("AT+CIPMUX=1\r\n", 1500u);
     esp8266->delay_cb(1500u);
-    esp8266->send_cb("AT+CIPSERVER=1,80\r\n", 1500u);
+    uart_sts |= esp8266->send_cb("AT+CIPSERVER=1,80\r\n", 1500u);
+    if (0x00 != uart_sts)
+    {
+        return ESP8266_HAL_ERROR;
+    }
+    else
+    {
+        return ESP8266_OK;
+    }
 }

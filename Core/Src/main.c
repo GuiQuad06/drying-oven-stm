@@ -157,6 +157,8 @@ static void ask_user_credentials(esp8266_t *esp8266)
 int main(void)
 {
     /* USER CODE BEGIN 1 */
+    esp8266_status_t esp_sts = ESP8266_OK;
+
     dht22_init(&dht22, gpio_input_dir, gpio_write, delay_us, gpio_read, gpio_output_dir);
 
     esp8266_init(&esp8266, delay_ms, send_message);
@@ -207,7 +209,8 @@ int main(void)
     printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
 
     ask_user_credentials(&esp8266);
-    esp8266_connect(&esp8266);
+    esp_sts = esp8266_connect(&esp8266);
+    printf("%s\n", (esp_sts == ESP8266_OK) ? "Connected to wifi" : "Failed to connect to wifi");
 
     print_cli_menu();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, MAX_BUFFER_LEN);

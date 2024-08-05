@@ -50,6 +50,7 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi2;
 
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
@@ -69,9 +70,8 @@ osStaticThreadDef_t httpTaskControlBlock;
 osThreadId cliTaskHandle;
 uint32_t cliTaskBuffer[128];
 osStaticThreadDef_t cliTaskControlBlock;
-osMessageQId dataQueueHandle;
-uint8_t dataQueueBuffer[16 * sizeof(uint16_t)];
-osStaticMessageQDef_t dataQueueControlBlock;
+osMutexId dataMutexHandle;
+osStaticMutexDef_t dataMutexControlBlock;
 /* USER CODE BEGIN PV */
 dht22_t dht22;
 esp8266_t esp8266;
@@ -100,6 +100,7 @@ static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_TIM3_Init(void);
 void StartDefaultTask(const void *argument);
 void StartSensorTask(const void *argument);
 void StartHttpTask(const void *argument);
@@ -259,6 +260,7 @@ int main(void)
     MX_USART1_UART_Init();
     MX_USART2_UART_Init();
     MX_TIM4_Init();
+    MX_TIM3_Init();
     /* USER CODE BEGIN 2 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx_buffer, INPUT_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
@@ -274,6 +276,11 @@ int main(void)
     __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     /* USER CODE END 2 */
 
+    /* Create the mutex(es) */
+    /* definition and creation of dataMutex */
+    osMutexStaticDef(dataMutex, &dataMutexControlBlock);
+    dataMutexHandle = osMutexCreate(osMutex(dataMutex));
+
     /* USER CODE BEGIN RTOS_MUTEX */
     /* add mutexes, ... */
     /* USER CODE END RTOS_MUTEX */
@@ -285,11 +292,6 @@ int main(void)
     /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
-
-    /* Create the queue(s) */
-    /* definition and creation of dataQueue */
-    osMessageQStaticDef(dataQueue, 16, uint16_t, dataQueueBuffer, &dataQueueControlBlock);
-    dataQueueHandle = osMessageCreate(osMessageQ(dataQueue), NULL);
 
     /* USER CODE BEGIN RTOS_QUEUES */
     /* add queues, ... */
@@ -433,6 +435,49 @@ static void MX_SPI2_Init(void)
     /* USER CODE BEGIN SPI2_Init 2 */
 
     /* USER CODE END SPI2_Init 2 */
+}
+
+/**
+ * @brief TIM3 Initialization Function
+ * @param None
+ * @retval None
+ */
+static void MX_TIM3_Init(void)
+{
+    /* USER CODE BEGIN TIM3_Init 0 */
+
+    /* USER CODE END TIM3_Init 0 */
+
+    TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+    TIM_MasterConfigTypeDef sMasterConfig     = {0};
+
+    /* USER CODE BEGIN TIM3_Init 1 */
+
+    /* USER CODE END TIM3_Init 1 */
+    htim3.Instance               = TIM3;
+    htim3.Init.Prescaler         = 64000 - 1;
+    htim3.Init.CounterMode       = TIM_COUNTERMODE_UP;
+    htim3.Init.Period            = 65535;
+    htim3.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    /* USER CODE BEGIN TIM3_Init 2 */
+    __HAL_TIM_ENABLE(&htim3);
+    /* USER CODE END TIM3_Init 2 */
 }
 
 /**

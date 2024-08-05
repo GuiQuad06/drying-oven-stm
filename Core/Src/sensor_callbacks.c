@@ -19,7 +19,9 @@
  */
 void delay_ms(uint16_t time)
 {
-    HAL_Delay(time);
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim3) < time)
+        ;
 }
 
 /**

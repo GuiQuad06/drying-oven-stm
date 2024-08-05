@@ -43,6 +43,7 @@ extern "C"
     extern dht22_t dht22;
     extern max31865_t pt100_TempSensor;
     extern SPI_HandleTypeDef hspi2;
+    extern TIM_HandleTypeDef htim3;
     extern TIM_HandleTypeDef htim4;
     extern UART_HandleTypeDef huart1;
     extern volatile uint8_t esp_flag;

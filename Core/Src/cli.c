@@ -9,9 +9,12 @@
 
 #include "main.h"
 
+#include <stdarg.h>
 #include <string.h>
 
 #define MAX_ARGC (2u)
+
+extern int __io_putchar(int ch) __attribute__((weak));
 
 typedef struct
 {
@@ -168,6 +171,97 @@ cli_status_t cmd_dht22(int argc, char **argv)
     }
 
     return status;
+}
+
+void my_printf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char buffer[256];
+    int buffer_idx = 0;
+
+    // Iterate over the format string
+    for (const char *p = fmt; *p != '\0'; p++)
+    {
+        if (*p == '%' && *(p + 1) != '\0')
+        {
+            p++; // Skip the '%' character
+            switch (*p)
+            {
+                case 'd':
+                {
+                    int i = va_arg(args, int);
+                    // Convert integer to string manually
+                    char temp[10];
+                    int temp_idx = 0;
+                    if (i == 0)
+                    {
+                        temp[temp_idx++] = '0';
+                    }
+                    else
+                    {
+                        if (i < 0)
+                        {
+                            buffer[buffer_idx++] = '-';
+                            i                    = -i;
+                        }
+                        while (i > 0)
+                        {
+                            temp[temp_idx++] = (i % 10) + '0';
+                            i                /= 10;
+                        }
+                        // Reverse the string
+                        for (int j = temp_idx - 1; j >= 0; j--)
+                        {
+                            buffer[buffer_idx++] = temp[j];
+                        }
+                    }
+                    break;
+                }
+                case 's':
+                {
+                    const char *s = va_arg(args, const char *);
+                    while (*s)
+                    {
+                        buffer[buffer_idx++] = *s++;
+                    }
+                    break;
+                }
+                // Add more cases as needed for other format specifiers
+                default:
+                    buffer[buffer_idx++] = '%';
+                    buffer[buffer_idx++] = *p;
+                    break;
+            }
+        }
+        else
+        {
+            buffer[buffer_idx++] = *p;
+        }
+    }
+
+    buffer[buffer_idx] = '\0'; // Null-terminate the buffer
+    va_end(args);
+
+    // Output the buffer using __io_putchar
+    for (int i = 0; i < buffer_idx; i++)
+    {
+        __io_putchar(buffer[i]);
+    }
+}
+
+/**
+ * @brief Retarget PRINTF to UART2
+ * @param ch: character to be printed
+ * @retval character printed
+ */
+int __io_putchar(int ch)
+{
+    uint8_t c[1];
+    c[0] = ch & 0x00FF;
+    HAL_UART_Transmit(&huart2, &*c, 1, 10);
+
+    return ch;
 }
 
 /**

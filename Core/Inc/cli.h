@@ -39,5 +39,6 @@ cli_status_t cmd_led(int argc, char **argv);
 cli_status_t cmd_dht22(int argc, char **argv);
 
 int atoi(char *str);
+void my_printf(const char *fmt, ...);
 
 #endif /* INC_CLI_H_ */

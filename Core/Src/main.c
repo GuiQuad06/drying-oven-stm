@@ -187,7 +187,7 @@ static void ask_user_credentials(esp8266_t *esp8266)
     char ssid[MAX_CHAR_SSID];
     char password[MAX_CHAR_PWD];
 
-    printf("Enter SSID for wifi connection:\n");
+    PRINTF("Enter SSID for wifi connection:\n");
 
     while (!cli_flag)
     {
@@ -195,7 +195,7 @@ static void ask_user_credentials(esp8266_t *esp8266)
     memcpy(ssid, cli_buffer, strlen(cli_buffer) + 1);
     cli_flag = 0;
 
-    printf("Enter password for wifi connection:\n");
+    PRINTF("Enter password for wifi connection:\n");
 
     while (!cli_flag)
     {
@@ -265,11 +265,11 @@ int main(void)
     HAL_UARTEx_ReceiveToIdle_DMA(&huart2, rx_buffer, INPUT_BUF_SIZE);
     __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
 
-    printf("Coucou Hibou\nSoftware Version %s\n", fw_version);
+    PRINTF("Coucou Hibou\nSoftware Version %s\n", fw_version);
 
     ask_user_credentials(&esp8266);
     esp_sts = esp8266_connect(&esp8266);
-    printf("%s\n", (esp_sts == ESP8266_OK) ? "Connected to wifi" : "Failed to connect to wifi");
+    PRINTF("%s\n", (esp_sts == ESP8266_OK) ? "Connected to wifi" : "Failed to connect to wifi");
 
     print_cli_menu();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, MAX_BUFFER_LEN);
@@ -345,7 +345,7 @@ int main(void)
             http_send_data(&esp8266, esp_freeze_buffer, strlen(esp_freeze_buffer), hello_http, strlen(hello_http));
 
             esp_flag = 0;
-            printf("ESP8266: %s\n", esp_freeze_buffer);
+            PRINTF("ESP8266: %s\n", esp_freeze_buffer);
             /** Clear buffer */
             memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);
             /* start the DMA again */
@@ -663,19 +663,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
- * @brief Retarget printf to UART2
- * @param ch: character to be printed
- * @retval character printed
- */
-int __io_putchar(int ch)
-{
-    uint8_t c[1];
-    c[0] = ch & 0x00FF;
-    HAL_UART_Transmit(&huart2, &*c, 1, 10);
-
-    return ch;
-}
 
 /* USER CODE END 4 */
 

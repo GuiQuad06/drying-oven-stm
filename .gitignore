@@ -7,3 +7,4 @@ Release/
 .vscode/
 .mxproject
 .editorconfig
+*.SVDat

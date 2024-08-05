@@ -19,6 +19,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+#include "cmsis_os.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "cli.h"
@@ -55,6 +57,21 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
+osThreadId defaultTaskHandle;
+uint32_t defaultTaskBuffer[128];
+osStaticThreadDef_t defaultTaskControlBlock;
+osThreadId sensorTaskHandle;
+uint32_t sensorTaskBuffer[128];
+osStaticThreadDef_t sensorTaskControlBlock;
+osThreadId httpTaskHandle;
+uint32_t httpTaskBuffer[128];
+osStaticThreadDef_t httpTaskControlBlock;
+osThreadId cliTaskHandle;
+uint32_t cliTaskBuffer[128];
+osStaticThreadDef_t cliTaskControlBlock;
+osMessageQId dataQueueHandle;
+uint8_t dataQueueBuffer[16 * sizeof(uint16_t)];
+osStaticMessageQDef_t dataQueueControlBlock;
 /* USER CODE BEGIN PV */
 dht22_t dht22;
 esp8266_t esp8266;
@@ -83,6 +100,11 @@ static void MX_SPI2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM4_Init(void);
+void StartDefaultTask(const void *argument);
+void StartSensorTask(const void *argument);
+void StartHttpTask(const void *argument);
+void StartCliTask(const void *argument);
+
 /* USER CODE BEGIN PFP */
 static void ask_user_credentials(esp8266_t *esp8266);
 
@@ -90,6 +112,32 @@ static void ask_user_credentials(esp8266_t *esp8266);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+ * @brief This function is called to increment  a global variable "uwTick"
+ *        used as application time base.
+ * @note We need to increment tick by different value depending on
+ *        the configTICK_RATE_HZ constant
+ * @note This function will overload the weak version
+ * @retval None
+ */
+void HAL_IncTick(void)
+{
+    switch (configTICK_RATE_HZ)
+    {
+        case 1000:
+            uwTick += HAL_TICK_FREQ_1KHZ;
+            break;
+        case 100:
+            uwTick += HAL_TICK_FREQ_100HZ;
+            break;
+        case 10:
+            uwTick += HAL_TICK_FREQ_10HZ;
+            break;
+        default:
+            uwTick += HAL_TICK_FREQ_DEFAULT;
+    }
+}
+
 /**
  * @brief      UART Rx callback function
  * @param[in]  huart UART handle
@@ -226,6 +274,58 @@ int main(void)
     __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     /* USER CODE END 2 */
 
+    /* USER CODE BEGIN RTOS_MUTEX */
+    /* add mutexes, ... */
+    /* USER CODE END RTOS_MUTEX */
+
+    /* USER CODE BEGIN RTOS_SEMAPHORES */
+    /* add semaphores, ... */
+    /* USER CODE END RTOS_SEMAPHORES */
+
+    /* USER CODE BEGIN RTOS_TIMERS */
+    /* start timers, add new ones, ... */
+    /* USER CODE END RTOS_TIMERS */
+
+    /* Create the queue(s) */
+    /* definition and creation of dataQueue */
+    osMessageQStaticDef(dataQueue, 16, uint16_t, dataQueueBuffer, &dataQueueControlBlock);
+    dataQueueHandle = osMessageCreate(osMessageQ(dataQueue), NULL);
+
+    /* USER CODE BEGIN RTOS_QUEUES */
+    /* add queues, ... */
+    /* USER CODE END RTOS_QUEUES */
+
+    /* Create the thread(s) */
+    /* definition and creation of defaultTask */
+    osThreadStaticDef(defaultTask,
+                      StartDefaultTask,
+                      osPriorityIdle,
+                      0,
+                      128,
+                      defaultTaskBuffer,
+                      &defaultTaskControlBlock);
+    defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
+    /* definition and creation of sensorTask */
+    osThreadStaticDef(sensorTask, StartSensorTask, osPriorityNormal, 0, 128, sensorTaskBuffer, &sensorTaskControlBlock);
+    sensorTaskHandle = osThreadCreate(osThread(sensorTask), NULL);
+
+    /* definition and creation of httpTask */
+    osThreadStaticDef(httpTask, StartHttpTask, osPriorityAboveNormal, 0, 128, httpTaskBuffer, &httpTaskControlBlock);
+    httpTaskHandle = osThreadCreate(osThread(httpTask), NULL);
+
+    /* definition and creation of cliTask */
+    osThreadStaticDef(cliTask, StartCliTask, osPriorityHigh, 0, 128, cliTaskBuffer, &cliTaskControlBlock);
+    cliTaskHandle = osThreadCreate(osThread(cliTask), NULL);
+
+    /* USER CODE BEGIN RTOS_THREADS */
+    /* add threads, ... */
+    /* USER CODE END RTOS_THREADS */
+
+    /* Start scheduler */
+    osKernelStart();
+
+    /* We should never get here as control is now taken by the scheduler */
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1)
@@ -450,10 +550,10 @@ static void MX_DMA_Init(void)
 
     /* DMA interrupt init */
     /* DMA1_Channel5_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
     /* DMA1_Channel6_IRQn interrupt configuration */
-    HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
 }
 
@@ -501,7 +601,7 @@ static void MX_GPIO_Init(void)
     HAL_GPIO_Init(CS_GPIO_Port, &GPIO_InitStruct);
 
     /* EXTI interrupt init*/
-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
     /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -528,6 +628,78 @@ int __io_putchar(int ch)
 }
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+ * @brief  Function implementing the defaultTask thread.
+ * @param  argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(const void *argument)
+{
+    /* USER CODE BEGIN 5 */
+    /* Infinite loop */
+    for (;;)
+    {
+        osDelay(1);
+    }
+    /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_StartSensorTask */
+/**
+ * @brief Function implementing the sensorTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartSensorTask */
+void StartSensorTask(const void *argument)
+{
+    /* USER CODE BEGIN StartSensorTask */
+    /* Infinite loop */
+    for (;;)
+    {
+        osDelay(1);
+    }
+    /* USER CODE END StartSensorTask */
+}
+
+/* USER CODE BEGIN Header_StartHttpTask */
+/**
+ * @brief Function implementing the httpTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartHttpTask */
+void StartHttpTask(const void *argument)
+{
+    /* USER CODE BEGIN StartHttpTask */
+    /* Infinite loop */
+    for (;;)
+    {
+        osDelay(1);
+    }
+    /* USER CODE END StartHttpTask */
+}
+
+/* USER CODE BEGIN Header_StartCliTask */
+/**
+ * @brief Function implementing the cliTask thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartCliTask */
+void StartCliTask(const void *argument)
+{
+    /* USER CODE BEGIN StartCliTask */
+    /* Infinite loop */
+    for (;;)
+    {
+        osDelay(1);
+    }
+    /* USER CODE END StartCliTask */
+}
 
 /**
  * @brief  This function is executed in case of error occurrence.

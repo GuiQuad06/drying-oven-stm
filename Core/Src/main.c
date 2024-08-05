@@ -274,6 +274,11 @@ int main(void)
     print_cli_menu();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, esp_buffer, MAX_BUFFER_LEN);
     __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
+
+    // Enabling the CM3 Cycle Counter
+    DWT->CTRL |= (1U << 0);
+    SEGGER_SYSVIEW_Conf();
+    // SEGGER_SYSVIEW_Start();
     /* USER CODE END 2 */
 
     /* Create the mutex(es) */

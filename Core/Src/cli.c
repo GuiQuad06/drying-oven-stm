@@ -41,12 +41,12 @@ void print_cli_menu(void)
 
     while (ptr->title != 0)
     {
-        printf("%d) %s : %s\n", n, ptr->title, ptr->desc);
+        PRINTF("%d) %s : %s\n", n, ptr->title, ptr->desc);
 
         ptr++;
         n++;
     }
-    printf("\n");
+    PRINTF("\n");
 }
 
 cli_status_t cli_input(char *cli)
@@ -104,14 +104,14 @@ cli_status_t cli_input(char *cli)
 
 void print_feedback(cli_status_t sts)
 {
-    printf("%s\n", str_status[sts].str);
+    PRINTF("%s\n", str_status[sts].str);
 }
 
 cli_status_t cmd_read_pt100(int argc, char **argv)
 {
     cli_status_t status = STATUS_OK;
 
-    printf("PT100 temperature is:%u\n", (uint16_t) max31865_readCelsius(&pt100_TempSensor));
+    PRINTF("PT100 temperature is:%u\n", (uint16_t) max31865_readCelsius(&pt100_TempSensor));
 
     return status;
 }
@@ -165,8 +165,8 @@ cli_status_t cmd_dht22(int argc, char **argv)
         }
         else
         {
-            printf("Temperature: %u\n", (uint16_t) (data[1] / 10.0));
-            printf("Humidity: %u\n", (uint16_t) (data[0] / 10.0));
+            PRINTF("Temperature: %u\n", (uint16_t) (data[1] / 10.0));
+            PRINTF("Humidity: %u\n", (uint16_t) (data[0] / 10.0));
         }
     }
 

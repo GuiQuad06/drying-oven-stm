@@ -88,7 +88,13 @@ static uint8_t esp_buffer[MAX_BUFFER_LEN];
 static char esp_freeze_buffer[MAX_BUFFER_LEN];
 
 volatile uint8_t cli_flag = 0;
-volatile uint8_t esp_flag = 0;
+
+typedef struct __attribute__((__packed__))
+{
+    uint16_t oven_temperature;
+    uint16_t int_temp_celsius;
+    uint16_t int_humidity;
+} sensor_values_t;
 
 /* USER CODE END PV */
 
@@ -147,17 +153,23 @@ void HAL_IncTick(void)
  */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
+    BaseType_t is_higher_priority_task_woken = pdFALSE;
+
     if (USART2 == huart->Instance)
     {
         /** Copy RxBuffer to cli_input buffer for processing*/
         memcpy(cli_buffer, rx_buffer, Size);
 
-        /* start the DMA again */
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
-        __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
-
         /** Set New message available for processing */
-        cli_flag = 1;
+        // TODO This is a temporary solution to avoid Notify a task while scheduler has not yet started
+        // Best solution could be to use a InitTask to ask_user_credentials and kill it after
+        // so that we won't need anymore cli_flag
+        if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
+        {
+            cli_flag = 1;
+            return;
+        }
+        vTaskNotifyGiveFromISR(cliTaskHandle, &is_higher_priority_task_woken);
     }
     else if (USART1 == huart->Instance)
     {
@@ -167,7 +179,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         /** Set New message available for processing*/
         if (MAX_BUFFER_LEN == Size)
         {
-            esp_flag = 1;
+            vTaskNotifyGiveFromISR(httpTaskHandle, &is_higher_priority_task_woken);
         }
         else
         {
@@ -180,6 +192,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     {
         return;
     }
+    portYIELD_FROM_ISR(is_higher_priority_task_woken);
 }
 
 static void ask_user_credentials(esp8266_t *esp8266)
@@ -193,6 +206,11 @@ static void ask_user_credentials(esp8266_t *esp8266)
     {
     }
     memcpy(ssid, cli_buffer, strlen(cli_buffer) + 1);
+
+    /* start the DMA again */
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
+    __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
+
     cli_flag = 0;
 
     PRINTF("Enter password for wifi connection:\n");
@@ -201,6 +219,11 @@ static void ask_user_credentials(esp8266_t *esp8266)
     {
     }
     memcpy(password, cli_buffer, strlen(cli_buffer) + 1);
+
+    /* start the DMA again */
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
+    __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
+
     cli_flag = 0;
 
     esp_8266_set_credentials(esp8266, ssid, password);
@@ -340,31 +363,6 @@ int main(void)
         /* USER CODE END WHILE */
 
         /* USER CODE BEGIN 3 */
-        if (esp_flag == 1)
-        {
-            http_send_data(&esp8266, esp_freeze_buffer, strlen(esp_freeze_buffer), hello_http, strlen(hello_http));
-
-            esp_flag = 0;
-            PRINTF("ESP8266: %s\n", esp_freeze_buffer);
-            /** Clear buffer */
-            memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);
-            /* start the DMA again */
-            HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
-            __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
-        }
-
-        /** Check if message is available */
-        if (cli_flag == 1)
-        {
-            /** Reset message status */
-            cli_flag = 0;
-
-            // Do the thing
-            print_feedback(cli_input(cli_buffer));
-
-            /** Clear buffer */
-            memset(cli_buffer, 0, INPUT_BUF_SIZE);
-        }
     }
     /* USER CODE END 3 */
 }
@@ -676,10 +674,11 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(const void *argument)
 {
     /* USER CODE BEGIN 5 */
+    const TickType_t xDelay = 20000 / portTICK_PERIOD_MS;
     /* Infinite loop */
     for (;;)
     {
-        osDelay(1);
+        vTaskDelay(xDelay);
     }
     /* USER CODE END 5 */
 }
@@ -694,10 +693,37 @@ void StartDefaultTask(const void *argument)
 void StartSensorTask(const void *argument)
 {
     /* USER CODE BEGIN StartSensorTask */
+    sensor_values_t sensor_values = {.oven_temperature = 0, .int_temp_celsius = 0, .int_humidity = 0};
+
+    TickType_t xLastWakeTime;
+    uint8_t cs                              = 0xFF;
+    uint16_t int_sensor_values[DHT22_FRAME] = {0};
+    // Run the task every 10 seconds
+    const TickType_t xDelay                 = 10000 / portTICK_PERIOD_MS;
+
+    // Initialise the xLastWakeTime variable with the current time.
+    xLastWakeTime = xTaskGetTickCount();
     /* Infinite loop */
     for (;;)
     {
-        osDelay(1);
+        vTaskDelayUntil(&xLastWakeTime, xDelay);
+
+        sensor_values.oven_temperature = (uint16_t) max31865_readCelsius(&pt100_TempSensor);
+
+        (void) dht22_start(&dht22);
+        cs = dht22_read_data(&dht22, int_sensor_values, DHT22_FRAME);
+        if (0x00 == cs)
+        {
+            sensor_values.int_temp_celsius = (uint16_t) (int_sensor_values[1] / 10.0);
+            sensor_values.int_humidity     = (uint16_t) (int_sensor_values[0] / 10.0);
+        }
+        if (dataQueueHandle != NULL)
+        {
+            if (xQueueSend(dataQueueHandle, (void *) &sensor_values, (TickType_t) 10) != pdPASS)
+            {
+                PRINTF("Failed to send sensor data to the queue\n");
+            }
+        }
     }
     /* USER CODE END StartSensorTask */
 }
@@ -712,10 +738,67 @@ void StartSensorTask(const void *argument)
 void StartHttpTask(const void *argument)
 {
     /* USER CODE BEGIN StartHttpTask */
+    sensor_values_t rx_data = {.int_humidity = 12, .int_temp_celsius = 13, .oven_temperature = 14};
+
+    char buffer[50]; // Adjust the size as needed
+    char *html_start = "<h1>Temp :";
+    char *html_end   = "</h1>";
+    char temp_str[4]; // Assuming temperature value won't exceed 999999999
     /* Infinite loop */
     for (;;)
     {
-        osDelay(1);
+        // Blocked task until the notification has been received
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        // Convert temperature to string
+        int temp_value = rx_data.int_temp_celsius;
+        int i          = 0;
+        while (temp_value > 0)
+        {
+            temp_str[i++] = (temp_value % 10) + '0';
+            temp_value    /= 10;
+        }
+        temp_str[i] = '\0';
+
+        // Reverse the temp_str
+        for (int start = 0, end = i - 1; start < end; start++, end--)
+        {
+            char temp       = temp_str[start];
+            temp_str[start] = temp_str[end];
+            temp_str[end]   = temp;
+        }
+
+        // Manually copy the strings into the buffer
+        int j = 0;
+        for (i = 0; html_start[i] != '\0'; i++, j++)
+        {
+            buffer[j] = html_start[i];
+        }
+        for (i = 0; temp_str[i] != '\0'; i++, j++)
+        {
+            buffer[j] = temp_str[i];
+        }
+        for (i = 0; html_end[i] != '\0'; i++, j++)
+        {
+            buffer[j] = html_end[i];
+        }
+        buffer[j] = '\0';
+
+        http_send_data(&esp8266, esp_freeze_buffer, strlen(esp_freeze_buffer), buffer, strlen(buffer));
+
+        //        if (dataQueueHandle != NULL)
+        //        {
+        //            if (xQueueReceive(dataQueueHandle, &rx_data, portMAX_DELAY) != pdPASS)
+        //            {
+        //                PRINTF("Failed to receive int temperature data from the queue\n");
+        //            }
+        //        }
+
+        /** Clear buffer */
+        memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);
+        /* start the DMA again */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart1, (uint8_t *) esp_buffer, MAX_BUFFER_LEN);
+        __HAL_DMA_DISABLE_IT(&hdma_usart1_rx, DMA_IT_HT);
     }
     /* USER CODE END StartHttpTask */
 }
@@ -733,7 +816,16 @@ void StartCliTask(const void *argument)
     /* Infinite loop */
     for (;;)
     {
-        osDelay(1);
+        // Blocked task until the notification has been received
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        cli_input(cli_buffer);
+
+        /** Clear buffer */
+        memset(cli_buffer, 0, INPUT_BUF_SIZE);
+        /* start the DMA again */
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart2, (uint8_t *) rx_buffer, INPUT_BUF_SIZE);
+        __HAL_DMA_DISABLE_IT(&hdma_usart2_rx, DMA_IT_HT);
     }
     /* USER CODE END StartCliTask */
 }

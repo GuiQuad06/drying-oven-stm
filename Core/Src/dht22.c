@@ -74,7 +74,7 @@ uint8_t dht22_read_data(dht22_t *device, uint16_t *data, uint16_t size)
 
     // Verify the checksum
     acc = (data[0] >> 8) + (data[0] & 0xFF) + (data[1] >> 8) + (data[1] & 0xFF);
-    if (checksum != (acc & 0xFF))
+    if (checksum == (acc & 0xFF))
     {
         checksum = 0x00;
     }

@@ -46,17 +46,17 @@ extern "C"
     extern TIM_HandleTypeDef htim3;
     extern TIM_HandleTypeDef htim4;
     extern UART_HandleTypeDef huart1;
-    extern UART_HandleTypeDef huart2;
+    extern UART_HandleTypeDef huart3;
     extern volatile uint8_t esp_flag;
-    /* USER CODE END ET */
+/* USER CODE END ET */
 
-    /* Exported constants --------------------------------------------------------*/
-    /* USER CODE BEGIN EC */
+/* Exported constants --------------------------------------------------------*/
+/* USER CODE BEGIN EC */
 
-    /* USER CODE END EC */
+/* USER CODE END EC */
 
-    /* Exported macro ------------------------------------------------------------*/
-    /* USER CODE BEGIN EM */
+/* Exported macro ------------------------------------------------------------*/
+/* USER CODE BEGIN EM */
 #define PRINTF(x, ...) my_printf(x, ##__VA_ARGS__)
     /* USER CODE END EM */
 

@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define WANT_SEGGER_SYSVIEW (1u)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -301,7 +301,6 @@ int main(void)
     // Enabling the CM3 Cycle Counter
     DWT->CTRL |= (1U << 0);
     SEGGER_SYSVIEW_Conf();
-    // SEGGER_SYSVIEW_Start();
     /* USER CODE END 2 */
 
     /* Create the mutex(es) */
@@ -681,9 +680,16 @@ void StartDefaultTask(const void *argument)
 {
     /* USER CODE BEGIN 5 */
     const TickType_t xDelay = 20000 / portTICK_PERIOD_MS;
+    bool segger_started     = false;
     /* Infinite loop */
     for (;;)
     {
+        if (!segger_started && WANT_SEGGER_SYSVIEW)
+        {
+            SEGGER_SYSVIEW_Start();
+            segger_started = true;
+        }
+
         vTaskDelay(xDelay);
     }
     /* USER CODE END 5 */

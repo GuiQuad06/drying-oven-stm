@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define WANT_SEGGER_SYSVIEW (1u)
+#define WANT_SEGGER_SYSVIEW (0u)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -89,11 +89,16 @@ static char esp_freeze_buffer[MAX_BUFFER_LEN];
 
 volatile uint8_t cli_flag = 0;
 
-typedef struct __attribute__((__packed__))
+typedef union
 {
-    uint16_t oven_temperature;
-    uint16_t int_temp_celsius;
-    uint16_t int_humidity;
+    uint64_t data;
+
+    struct __attribute__((__packed__))
+    {
+        uint16_t oven_temperature;
+        uint16_t int_temp_celsius;
+        uint16_t int_humidity;
+    } unwrapped;
 } sensor_values_t;
 
 /* USER CODE END PV */
@@ -705,7 +710,7 @@ void StartDefaultTask(const void *argument)
 void StartSensorTask(const void *argument)
 {
     /* USER CODE BEGIN StartSensorTask */
-    sensor_values_t sensor_values = {.oven_temperature = 0, .int_temp_celsius = 0, .int_humidity = 0};
+    sensor_values_t sensor_values = {.data = 0};
 
     TickType_t xLastWakeTime;
     uint8_t cs                              = 0xFF;
@@ -720,18 +725,18 @@ void StartSensorTask(const void *argument)
     {
         vTaskDelayUntil(&xLastWakeTime, xDelay);
 
-        sensor_values.oven_temperature = (uint16_t) max31865_readCelsius(&pt100_TempSensor);
+        sensor_values.unwrapped.oven_temperature = (uint16_t) max31865_readCelsius(&pt100_TempSensor);
 
         (void) dht22_start(&dht22);
         cs = dht22_read_data(&dht22, int_sensor_values, DHT22_FRAME);
         if (0x00 == cs)
         {
-            sensor_values.int_temp_celsius = (uint16_t) (int_sensor_values[1] / 10.0);
-            sensor_values.int_humidity     = (uint16_t) (int_sensor_values[0] / 10.0);
+            sensor_values.unwrapped.int_temp_celsius = (uint16_t) (int_sensor_values[1] / 10.0);
+            sensor_values.unwrapped.int_humidity     = (uint16_t) (int_sensor_values[0] / 10.0);
         }
         if (dataQueueHandle != NULL)
         {
-            if (xQueueSend(dataQueueHandle, (void *) &sensor_values, (TickType_t) 10) != pdPASS)
+            if (xQueueSend(dataQueueHandle, (void *) &sensor_values.data, (TickType_t) 10) != pdPASS)
             {
                 PRINTF("Failed to send sensor data to the queue\n");
             }
@@ -750,7 +755,7 @@ void StartSensorTask(const void *argument)
 void StartHttpTask(const void *argument)
 {
     /* USER CODE BEGIN StartHttpTask */
-    sensor_values_t rx_data = {.int_humidity = 12, .int_temp_celsius = 13, .oven_temperature = 14};
+    sensor_values_t rx_data;
 
     char buffer[50]; // Adjust the size as needed
     char *html_start = "<h1>Temp :";
@@ -762,8 +767,16 @@ void StartHttpTask(const void *argument)
         // Blocked task until the notification has been received
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
+        if (dataQueueHandle != NULL)
+        {
+            if (xQueueReceive(dataQueueHandle, &rx_data.data, portMAX_DELAY) != pdPASS)
+            {
+                PRINTF("Failed to receive int temperature data from the queue\n");
+            }
+        }
+
         // Convert temperature to string
-        int temp_value = rx_data.int_temp_celsius;
+        int temp_value = rx_data.unwrapped.int_temp_celsius;
         int i          = 0;
         while (temp_value > 0)
         {
@@ -797,14 +810,6 @@ void StartHttpTask(const void *argument)
         buffer[j] = '\0';
 
         http_send_data(&esp8266, esp_freeze_buffer, strlen(esp_freeze_buffer), buffer, strlen(buffer));
-
-        //        if (dataQueueHandle != NULL)
-        //        {
-        //            if (xQueueReceive(dataQueueHandle, &rx_data, portMAX_DELAY) != pdPASS)
-        //            {
-        //                PRINTF("Failed to receive int temperature data from the queue\n");
-        //            }
-        //        }
 
         /** Clear buffer */
         memset(esp_freeze_buffer, 0, MAX_BUFFER_LEN);

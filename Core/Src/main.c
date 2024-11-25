@@ -101,6 +101,8 @@ typedef union
     } unwrapped;
 } sensor_values_t;
 
+static sensor_values_t sensor_values = {.data = 0};
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -710,8 +712,6 @@ void StartDefaultTask(const void *argument)
 void StartSensorTask(const void *argument)
 {
     /* USER CODE BEGIN StartSensorTask */
-    sensor_values_t sensor_values = {.data = 0};
-
     TickType_t xLastWakeTime;
     uint8_t cs                              = 0xFF;
     uint16_t int_sensor_values[DHT22_FRAME] = {0};
@@ -729,16 +729,13 @@ void StartSensorTask(const void *argument)
 
         (void) dht22_start(&dht22);
         cs = dht22_read_data(&dht22, int_sensor_values, DHT22_FRAME);
-        if (0x00 == cs)
+        if (0x00 == cs && dataMutexHandle != NULL)
         {
-            sensor_values.unwrapped.int_temp_celsius = (uint16_t) (int_sensor_values[1] / 10.0);
-            sensor_values.unwrapped.int_humidity     = (uint16_t) (int_sensor_values[0] / 10.0);
-        }
-        if (dataQueueHandle != NULL)
-        {
-            if (xQueueSend(dataQueueHandle, (void *) &sensor_values.data, (TickType_t) 10) != pdPASS)
+            if (osMutexWait(dataMutexHandle, osWaitForever) == osOK)
             {
-                PRINTF("Failed to send sensor data to the queue\n");
+                sensor_values.unwrapped.int_temp_celsius = (uint16_t) int_sensor_values[1] / 10.0;
+                sensor_values.unwrapped.int_humidity     = (uint16_t) int_sensor_values[0] / 10.0;
+                osMutexRelease(dataMutexHandle);
             }
         }
     }
@@ -755,7 +752,7 @@ void StartSensorTask(const void *argument)
 void StartHttpTask(const void *argument)
 {
     /* USER CODE BEGIN StartHttpTask */
-    sensor_values_t rx_data;
+    sensor_values_t rx_data = {.data = 0};
 
     char buffer[50]; // Adjust the size as needed
     char *html_start = "<h1>Temp :";
@@ -767,11 +764,12 @@ void StartHttpTask(const void *argument)
         // Blocked task until the notification has been received
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-        if (dataQueueHandle != NULL)
+        if (dataMutexHandle != NULL)
         {
-            if (xQueueReceive(dataQueueHandle, &rx_data.data, portMAX_DELAY) != pdPASS)
+            if (osMutexWait(dataMutexHandle, osWaitForever) == osOK)
             {
-                PRINTF("Failed to receive int temperature data from the queue\n");
+                rx_data.data = sensor_values.data;
+                osMutexRelease(dataMutexHandle);
             }
         }
 
